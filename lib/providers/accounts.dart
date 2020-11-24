@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 
 class Accounts with ChangeNotifier {
   var token =
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjVmYTNiMzY0ZTY1OTVhM2JkM2JiOTFmMCIsImlhdCI6MTYwNjExNDAwMn0.FxEnbc3RapfGpKQZHHF4V93PwH3eEKosROUVlw7GdjM';
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjVmYTNiMzY0ZTY1OTVhM2JkM2JiOTFmMCIsImlhdCI6MTYwNjIwOTQzOH0.WiwSnThJvpLySCSGl-hERn_pfr6-vS91-958Owglp_Y';
   dynamic get _token {
     return [this.token];
   }

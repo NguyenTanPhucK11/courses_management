@@ -69,5 +69,8 @@ class Courses with ChangeNotifier {
     notifyListeners();
   }
 
-
+  void remove() {
+    _courses.clear();
+    notifyListeners();
+  }
 }

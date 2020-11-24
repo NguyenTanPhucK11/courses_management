@@ -1,9 +1,11 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:courses_management/models/post.dart';
 import 'package:courses_management/providers/course.dart';
 import 'package:courses_management/providers/courses.dart';
 import 'package:courses_management/screens/courses_overview_screen.dart';
+import 'package:courses_management/widget/snackbar.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_datetime_picker/flutter_datetime_picker.dart';
@@ -20,14 +22,14 @@ class AddCourse extends StatefulWidget {
   _AddCourseState createState() => _AddCourseState();
 }
 
-Future<EditCourse> editCourses(String id, Course course, BuildContext context,
-    dateStart, dateEnd, int buildingId, int roomId) async {
+Future<Album> editCourses(String id, Course course, BuildContext context,
+    String dateStart, String dateEnd, int buildingId, int roomId) async {
   final _token = Provider.of<Accounts>(context, listen: false).token.toString();
   // print(_token);
   final _roomId = Provider.of<BuildingsRooms>(context, listen: false);
   final _buidingId = _roomId.listObjBuildingRoomId[buildingId];
   final http.Response response = await http.post(
-    'http://10.86.224.37:5001/api/edu/edit_course',
+    'http://118.69.123.51:5000/fis/api/edu/edit_course',
     headers: <String, String>{
       'Content-Type': 'application/json; charset=UTF-8',
       HttpHeaders.authorizationHeader: "Basic ${_token}",
@@ -47,36 +49,21 @@ Future<EditCourse> editCourses(String id, Course course, BuildContext context,
           .toString(),
     }),
   );
-  print(EditCourse.fromJson(jsonDecode(response.body)).message);
-  if (EditCourse.fromJson(jsonDecode(response.body)).resultCode == 1) {
+  // print(dateStart + ":" + dateEnd);
+  print(Album.fromJson(jsonDecode(response.body)).message);
+  if (Album.fromJson(jsonDecode(response.body)).resultCode == 1) {
     Navigator.push(context,
         MaterialPageRoute(builder: (context) => CoursesOverviewScreen()));
   }
   if (response.statusCode == 200) {
-    return EditCourse.fromJson(jsonDecode(response.body));
+    return Album.fromJson(jsonDecode(response.body));
   } else {
     throw Exception('Failed to create album.');
   }
 }
 
-class EditCourse {
-  final int resultCode;
-  final data;
-  final String message;
-
-  EditCourse({this.resultCode, this.data, this.message});
-
-  factory EditCourse.fromJson(Map<String, dynamic> json) {
-    // print("json: ${json['resultCode']}");
-    return EditCourse(
-        resultCode: json['resultCode'],
-        data: json['data'],
-        message: json['message']);
-  }
-}
-
-Future<AlbumCourses> addCourse(Course course, BuildContext context, dateStart,
-    dateEnd, int buildingId, int roomId) async {
+Future<Album> addCourse(Course course, BuildContext context, dateStart, dateEnd,
+    int buildingId, int roomId) async {
   final _token = Provider.of<Accounts>(context, listen: false).token.toString();
   // print(_token);
   final _roomId = Provider.of<BuildingsRooms>(context, listen: false);
@@ -101,95 +88,16 @@ Future<AlbumCourses> addCourse(Course course, BuildContext context, dateStart,
           .toString(),
     }),
   );
-  print(AlbumCourses.fromJson(jsonDecode(response.body)).message);
-  if (AlbumCourses.fromJson(jsonDecode(response.body)).resultCode == 1) {
+
+  print(Album.fromJson(jsonDecode(response.body)).message);
+  if (Album.fromJson(jsonDecode(response.body)).resultCode == 1) {
     Navigator.push(context,
         MaterialPageRoute(builder: (context) => CoursesOverviewScreen()));
   }
   if (response.statusCode == 200) {
-    return AlbumCourses.fromJson(jsonDecode(response.body));
+    return Album.fromJson(jsonDecode(response.body));
   } else {
     throw Exception('Failed to create album.');
-  }
-}
-
-class AlbumCourses {
-  final int resultCode;
-  final data;
-  final String message;
-
-  AlbumCourses({this.resultCode, this.data, this.message});
-
-  factory AlbumCourses.fromJson(Map<String, dynamic> json) {
-    // print("json: ${json['resultCode']}");
-    return AlbumCourses(
-        resultCode: json['resultCode'],
-        data: json['data'],
-        message: json['message']);
-  }
-}
-
-Future<Album> fetchAlbum(BuildContext context) async {
-  final _token = Provider.of<Accounts>(context, listen: false).token.toString();
-  final response = await http.get(
-    'http://10.86.224.37:5001/api/edu/get_building',
-    headers: <String, String>{
-      'Content-Type': 'application/json; charset=UTF-8',
-      HttpHeaders.authorizationHeader: "Basic ${_token}",
-    },
-  );
-  var _listBR;
-  var _listBRId;
-  var _data = Album.fromJson(jsonDecode(response.body)).data;
-  final data = Provider.of<BuildingsRooms>(context, listen: false);
-  _listBR = data.listObjBuildingRoom;
-  _listBRId = data.listObjBuildingRoomId;
-  for (var index = 0; index < _data.length; index++) {
-    var listRoom = _listBR[index]
-        [data.listObjBuildingRoom[index].keys.toString().substring(
-              1,
-              _listBR[index].keys.toString().length - 1,
-            )];
-    var listRoomId = _listBRId[index]
-        [data.listObjBuildingRoomId[index].keys.toString().substring(
-              1,
-              _listBRId[index].keys.toString().length - 1,
-            )];
-
-    listRoom[0] = _data[index]['room'][0]['roomName'] +
-        ' - ' +
-        _data[index]['room'][0]['location'];
-    listRoomId[0] = _data[index]['room'][0]['_id'];
-    for (var i = 1; i < _data[index]['room'].length; i++) {
-      listRoom.add(_data[index]['room'][i]['roomName'] +
-          ' - ' +
-          _data[index]['room'][i]['location']);
-      listRoomId.add(_data[index]['room'][i]['_id']);
-    }
-  }
-  Provider.of<BuildingsRooms>(context, listen: false).update(_listBR);
-  Provider.of<BuildingsRooms>(context, listen: false).updateId(_listBRId);
-
-  if (response.statusCode == 200) {
-    if (Album.fromJson(jsonDecode(response.body)).resultCode == 1) {
-      return Album.fromJson(jsonDecode(response.body));
-    }
-  } else {
-    throw Exception('Failed to create album.');
-  }
-}
-
-class Album {
-  final int resultCode;
-  final data;
-
-  Album({this.resultCode, this.data});
-
-  factory Album.fromJson(Map<String, dynamic> json) {
-    return Album(
-      resultCode: json['resultCode'],
-      data: json['data'],
-    );
   }
 }
 
@@ -204,7 +112,7 @@ class _AddCourseState extends State<AddCourse> {
   final _keyNameCourse = GlobalKey<FormState>();
   final _keyNameLecture = GlobalKey<FormState>();
   final _form = GlobalKey<FormState>();
-  String _dateTimeNow = DateFormat('yyyy-MM-dd').format(DateTime.now());
+  String _dateTimeNow = DateFormat('yyyy/MM/dd').format(DateTime.now());
 
   int _selectedValueBuilding = 0;
   int _selectedValueRoom = 0;
@@ -243,8 +151,9 @@ class _AddCourseState extends State<AddCourse> {
     super.didChangeDependencies();
   }
 
-  void _saveForm(dynamic dateStart, dynamic dateEnd) {
+  void _saveForm() {
     final isValid = _form.currentState.validate();
+    final _data = Provider.of<Courses>(context, listen: false);
     if (!isValid) return;
 
     _form.currentState.save();
@@ -257,19 +166,18 @@ class _AddCourseState extends State<AddCourse> {
       building: _listBuilding[_selectedValueBuilding],
       room: _listRoom[_selectedValueRoom],
     );
-    if (editCourse.id != null) {
-      Provider.of<Courses>(context, listen: false)
-          .updateCourse(editCourse.id, editCourse);
-      editCourses(editCourse.id, editCourse, context, dateStart, dateEnd,
-          _selectedValueBuilding, _selectedValueRoom);
-    } else {
-      Provider.of<Courses>(context, listen: false).addCourse(editCourse);
-      addCourse(editCourse, context, dateStart, dateEnd, _selectedValueBuilding,
-          _selectedValueRoom);
-    }
 
-    Navigator.push(context,
-        MaterialPageRoute(builder: (context) => CoursesOverviewScreen()));
+    if (editCourse.id != null) {
+      _data.updateCourse(editCourse.id, editCourse);
+      editCourses(editCourse.id, editCourse, context, _dateStart.text,
+          _dateEnd.text, _selectedValueBuilding, _selectedValueRoom);
+      // snackBar(context, 'Edit ');
+    } else {
+      _data.addCourse(editCourse);
+      addCourse(editCourse, context, _dateStart.text, _dateEnd.text,
+          _selectedValueBuilding, _selectedValueRoom);
+      _data.remove();
+    }
   }
 
   String formatTime(int i) {
@@ -294,7 +202,7 @@ class _AddCourseState extends State<AddCourse> {
         textTime,
         SizedBox(height: 10),
         Container(
-          width: MediaQuery.of(context).size.width * 0.42,
+          width: MediaQuery.of(context).size.width * 0.44,
           alignment: Alignment.center,
           child: TextFormField(
             readOnly: true,
@@ -316,10 +224,10 @@ class _AddCourseState extends State<AddCourse> {
                   minTime: DateTime(2010, 1, 1),
                   maxTime: DateTime(2022, 12, 31), onChanged: (date) {
                 myController.text =
-                    '${formatTime(date.day)}/${formatTime(date.month)}/${date.year}';
+                    '${date.year}/${formatTime(date.month)}/${formatTime(date.day)}';
               }, onConfirm: (date) {
                 myController.text =
-                    '${formatTime(date.day)}/${formatTime(date.month)}/${date.year}';
+                    '${date.year}/${formatTime(date.month)}/${formatTime(date.day)}';
               }, currentTime: DateTime.now(), locale: LocaleType.en);
             },
           ),
@@ -438,74 +346,82 @@ class _AddCourseState extends State<AddCourse> {
     }
     if (_dateStart.text == '') _dateStart.text = _dateTimeNow.toString();
     if (_dateEnd.text == '') _dateEnd.text = _dateTimeNow.toString();
-    if (_listBR[0][_keysList].length <= 4) fetchAlbum(context);
+    if (_listBR[0][_keysList].length <= 1) fetchBR(context);
     return Scaffold(
-      appBar: AppBar(
-        title: Text('TẠO MỚI KHOÁ HỌC'),
-      ),
-      body: Container(
-        padding: const EdgeInsets.all(20),
-        child: Form(
-          key: _form,
-          child: Wrap(
-            runSpacing: 10,
-            children: <Widget>[
-              text('Tên Khoá'),
-              nameInput('Nhập tên khoá học', _keyNameCourse, _nameCourse),
-              text('Giảng viên'),
-              nameInput('Nhập tên giảng viên', _keyNameLecture, _nameLecture),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: <Widget>[
-                  dateTime(_dateStart, text('Từ ngày')),
-                  dateTime(_dateEnd, text('Đến ngày')),
-                ],
-              ),
-              text('Toà nhà'),
-              option(_listBuilding[_selectedValueBuilding], showPickerBuilding),
-              text('Phòng'),
-              option(_listRoom[_selectedValueRoom], showPickerRoom),
-              Align(
-                alignment: Alignment.centerRight,
-                child: Container(
-                  width: MediaQuery.of(context).size.width * 0.4,
-                  height: MediaQuery.of(context).size.height * 0.05,
-                  child: RaisedButton(
-                    color: Colors.orange,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10)),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: <Widget>[
-                        Icon(
-                          Icons.save,
+      appBar: _buildAppBar(),
+      body: _buildBody(),
+    );
+  }
+
+  Widget _buildAppBar() {
+    return AppBar(
+      title: Text('TẠO MỚI KHOÁ HỌC'),
+    );
+  }
+
+  Widget _buildBody() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      child: Form(
+        key: _form,
+        child: Wrap(
+          runSpacing: 10,
+          children: <Widget>[
+            text('Tên Khoá'),
+            nameInput('Nhập tên khoá học', _keyNameCourse, _nameCourse),
+            text('Giảng viên'),
+            nameInput('Nhập tên giảng viên', _keyNameLecture, _nameLecture),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: <Widget>[
+                dateTime(_dateStart, text('Từ ngày')),
+                dateTime(_dateEnd, text('Đến ngày')),
+              ],
+            ),
+            text('Toà nhà'),
+            option(_listBuilding[_selectedValueBuilding], showPickerBuilding),
+            text('Phòng'),
+            option(_listRoom[_selectedValueRoom], showPickerRoom),
+            Align(
+              alignment: Alignment.centerRight,
+              child: Container(
+                width: MediaQuery.of(context).size.width * 0.4,
+                height: MediaQuery.of(context).size.height * 0.05,
+                child: RaisedButton(
+                  color: Colors.orange,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: <Widget>[
+                      Icon(
+                        Icons.save,
+                        color: Colors.white,
+                      ),
+                      SizedBox(width: 10),
+                      Text(
+                        'LƯU',
+                        style: TextStyle(
+                          fontSize: 20,
                           color: Colors.white,
+                          fontWeight: FontWeight.bold,
                         ),
-                        SizedBox(width: 10),
-                        Text(
-                          'LƯU',
-                          style: TextStyle(
-                            fontSize: 20,
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                    onPressed: () {
-                      if (_keyNameCourse.currentState.validate() ||
-                          _keyNameLecture.currentState.validate()) {
-                        if (_keyNameCourse.currentState.validate() &&
-                            _keyNameLecture.currentState.validate()) {
-                          _saveForm(_dateStart.text, _dateEnd.text);
-                        }
-                      }
-                    },
+                      ),
+                    ],
                   ),
+                  onPressed: () {
+                    if (_keyNameCourse.currentState.validate() ||
+                        _keyNameLecture.currentState.validate()) {
+                      if (_keyNameCourse.currentState.validate() &&
+                          _keyNameLecture.currentState.validate()) {
+                        _saveForm();
+                      }
+                    }
+                  },
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

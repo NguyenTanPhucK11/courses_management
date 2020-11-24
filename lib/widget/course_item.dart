@@ -1,18 +1,67 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:courses_management/models/post.dart';
 import 'package:courses_management/providers/accounts.dart';
 import 'package:courses_management/screens/add_course.dart';
+import 'package:courses_management/widget/snackbar.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import './course_info.dart';
 import '../providers/courses.dart';
 import 'package:http/http.dart' as http;
 
+showAlertDialog(String id, BuildContext context) {
+  Widget cancelButton = FlatButton(
+    child: Text("Cancel"),
+    onPressed: () {
+      Navigator.of(context).pop();
+    },
+  );
+  Widget continueButton = FlatButton(
+    child: Text("Continue"),
+    onPressed: () {
+      Provider.of<Courses>(context, listen: false).deleteCourse(id);
+      deleteAlbum(id, context);
+      Scaffold.of(context).showSnackBar(
+        new SnackBar(
+          content: new Text('You saved the thing!'),
+        ),
+      );
+
+      Navigator.of(context).pop();
+    },
+  );
+
+  AlertDialog alert = AlertDialog(
+    title: Row(
+      children: [
+        Icon(
+          Icons.delete,
+          color: Colors.red,
+        ),
+        Text(" Delete"),
+      ],
+    ),
+    content: Text("Do you want delete course ?"),
+    actions: [
+      cancelButton,
+      continueButton,
+    ],
+  );
+
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return alert;
+    },
+  );
+}
+
 Future<Album> deleteAlbum(String idCourse, BuildContext context) async {
   final _token = Provider.of<Accounts>(context, listen: false).token.toString();
 
-  var url = 'http://10.86.224.37:5001/api/edu/delete_course?courseId=';
+  var url = 'http://118.69.123.51:5000/fis/api/edu/delete_course?courseId=';
   var urlParams = url + idCourse;
   final response = await http.get(
     urlParams.toString(),
@@ -22,26 +71,11 @@ Future<Album> deleteAlbum(String idCourse, BuildContext context) async {
     },
   );
   print(Album.fromJson(jsonDecode(response.body)).message);
+
   if (response.statusCode == 200) {
     return Album.fromJson(jsonDecode(response.body));
   } else {
     throw Exception('Failed to create album.');
-  }
-}
-
-class Album {
-  final int resultCode;
-  final data;
-  final String message;
-
-  Album({this.resultCode, this.data, this.message});
-
-  factory Album.fromJson(Map<String, dynamic> json) {
-    // print("json: ${json['resultCode']}");
-    return Album(
-        resultCode: json['resultCode'],
-        data: json['data'],
-        message: json['message']);
   }
 }
 
@@ -61,7 +95,10 @@ class CourseItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final GlobalKey<ScaffoldState> _scaffoldKey =
+        new GlobalKey<ScaffoldState>();
     return Card(
+      key: _scaffoldKey,
       elevation: 5,
       child: Container(
         padding:
@@ -85,15 +122,15 @@ class CourseItem extends StatelessWidget {
                 Expanded(
                   flex: 1,
                   child: IconButton(
-                          icon: Icon(Icons.edit),
-                          onPressed: () {
-                            Navigator.of(context).pushNamed(
-                              AddCourse.routeName,
-                              arguments: id,
-                            );
-                          },
-                          color: Theme.of(context).primaryColor,
-                        ),
+                    icon: Icon(Icons.edit),
+                    onPressed: () {
+                      Navigator.of(context).pushNamed(
+                        AddCourse.routeName,
+                        arguments: id,
+                      );
+                    },
+                    color: Theme.of(context).primaryColor,
+                  ),
                   // child: PopupMenuButton<int>(
                   //   itemBuilder: (context) => [],
                   //   elevation: 4,
@@ -101,17 +138,14 @@ class CourseItem extends StatelessWidget {
                   // ),
                 ),
                 Expanded(
-                  flex: 1,
-                  child: IconButton(
-                          icon: Icon(Icons.delete),
-                          onPressed: () {
-                            Provider.of<Courses>(context, listen: false)
-                                .deleteCourse(id);
-                            deleteAlbum(id, context);
-                          },
-                          color: Theme.of(context).errorColor,
-                        )
-                ),
+                    flex: 1,
+                    child: IconButton(
+                      icon: Icon(Icons.delete),
+                      onPressed: () {
+                        showAlertDialog(id, context);
+                      },
+                      color: Theme.of(context).errorColor,
+                    )),
               ],
             ),
             CourseInfo(Icon(Icons.person, color: Colors.yellow),

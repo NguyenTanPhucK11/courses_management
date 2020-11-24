@@ -9,6 +9,7 @@ class CoursesListView extends StatelessWidget {
   Widget build(BuildContext context) {
     final coursesData = Provider.of<Courses>(context);
     final courseItemData = coursesData.courses;
+    
     return ListView.builder(
       padding: const EdgeInsets.all(10),
       itemCount: coursesData.courses.length,
