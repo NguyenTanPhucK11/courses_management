@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:courses_management/models/post.dart';
 import 'package:courses_management/providers/courses.dart';
+import 'package:courses_management/screens/login.dart';
 import 'package:courses_management/widget/course_item.dart';
 import 'package:courses_management/widget/courses_listview.dart';
 import 'package:flutter/material.dart';
@@ -53,11 +54,7 @@ class CoursesOverviewScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final idCourse = Provider.of<Courses>(context, listen: false).courses;
-    if (idCourse.length == 0) {
-
-      fetchCourse(context);
-    
-    }
+    if (idCourse.length == 0) fetchCourse(context);
 
     return Scaffold(
       appBar: _buildAppBar(context),
@@ -67,13 +64,19 @@ class CoursesOverviewScreen extends StatelessWidget {
 
   Widget _buildAppBar(context) {
     return AppBar(
+      leading: IconButton(
+        icon: Icon(Icons.arrow_back_ios),
+        onPressed: () {
+          Navigator.of(context).popUntil((route) => route.isFirst);
+        },
+      ),
       title: Text('TẠO MỚI KHOÁ HỌC'),
       actions: <Widget>[
         IconButton(
           icon: Icon(Icons.add),
           onPressed: () {
-            // Navigator.push(
-            // context, MaterialPageRoute(builder: (_) => AddCourse()));
+            Navigator.push(
+                context, MaterialPageRoute(builder: (_) => AddCourse()));
           },
         ),
       ],

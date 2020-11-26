@@ -8,9 +8,11 @@ import 'package:courses_management/screens/courses_overview_screen.dart';
 import 'package:courses_management/widget/snackbar.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_datetime_picker/flutter_datetime_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/buildings_rooms.dart';
 import 'package:http/http.dart' as http;
 import '../providers/accounts.dart';
@@ -77,8 +79,8 @@ Future<Album> addCourse(Course course, BuildContext context, dateStart, dateEnd,
     body: jsonEncode(<String, String>{
       "courseName": course.nameCourse,
       "trainer": course.nameLectures,
-      "startedDate": dateStart,
-      "endedDate": dateEnd,
+      "startedDate": dateStart + 'T00:00:00.000Z',
+      "endedDate": dateEnd + 'T00:00:00.000Z',
       "buildingId": _buidingId.keys
           .toString()
           .substring(1, _buidingId.keys.toString().length - 1),
@@ -112,7 +114,9 @@ class _AddCourseState extends State<AddCourse> {
   final _keyNameCourse = GlobalKey<FormState>();
   final _keyNameLecture = GlobalKey<FormState>();
   final _form = GlobalKey<FormState>();
-  String _dateTimeNow = DateFormat('yyyy/MM/dd').format(DateTime.now());
+  String _dateTimeNow = DateFormat('yyyy-MM-dd').format(DateTime.now());
+  var _timeStart = DateTime.now();
+  final FocusNode _nameCouseFocus = FocusNode();
 
   int _selectedValueBuilding = 0;
   int _selectedValueRoom = 0;
@@ -141,17 +145,19 @@ class _AddCourseState extends State<AddCourse> {
             Provider.of<Courses>(context, listen: false).findById(courseId);
         _nameCourse.text = editCourse.nameCourse;
         _nameLecture.text = editCourse.nameLectures;
-        _dateStart.text = editCourse.date.toString().substring(0, 10);
+        _dateStart.text =
+            editCourse.date.toString().substring(0, 10).replaceAll('/', '-');
         _dateEnd.text = editCourse.date
             .toString()
-            .substring(editCourse.date.length - 10, editCourse.date.length);
+            .substring(editCourse.date.length - 10, editCourse.date.length)
+            .replaceAll('/', '-');
       }
     }
     _isInit = false;
     super.didChangeDependencies();
   }
 
-  void _saveForm() {
+  void _saveForm(_key) async {
     final isValid = _form.currentState.validate();
     final _data = Provider.of<Courses>(context, listen: false);
     if (!isValid) return;
@@ -169,11 +175,16 @@ class _AddCourseState extends State<AddCourse> {
 
     if (editCourse.id != null) {
       _data.updateCourse(editCourse.id, editCourse);
+      snackBar(_key, 'Chỉnh sửa khoá học thành công !', null);
+      await Future.delayed(Duration(milliseconds: 500));
       editCourses(editCourse.id, editCourse, context, _dateStart.text,
           _dateEnd.text, _selectedValueBuilding, _selectedValueRoom);
+      _data.remove();
       // snackBar(context, 'Edit ');
     } else {
       _data.addCourse(editCourse);
+      snackBar(_key, 'Thêm khoá học thành công !', null);
+      await Future.delayed(Duration(milliseconds: 500));
       addCourse(editCourse, context, _dateStart.text, _dateEnd.text,
           _selectedValueBuilding, _selectedValueRoom);
       _data.remove();
@@ -224,10 +235,10 @@ class _AddCourseState extends State<AddCourse> {
                   minTime: DateTime(2010, 1, 1),
                   maxTime: DateTime(2022, 12, 31), onChanged: (date) {
                 myController.text =
-                    '${date.year}/${formatTime(date.month)}/${formatTime(date.day)}';
+                    '${date.year}-${formatTime(date.month)}-${formatTime(date.day)}';
               }, onConfirm: (date) {
                 myController.text =
-                    '${date.year}/${formatTime(date.month)}/${formatTime(date.day)}';
+                    '${date.year}-${formatTime(date.month)}-${formatTime(date.day)}';
               }, currentTime: DateTime.now(), locale: LocaleType.en);
             },
           ),
@@ -263,6 +274,9 @@ class _AddCourseState extends State<AddCourse> {
       child: Form(
         key: _key,
         child: TextFormField(
+          inputFormatters: [
+            WhitelistingTextInputFormatter(RegExp(r"[a-zA-Z]+|\s"))
+          ],
           textAlignVertical: TextAlignVertical.center,
           validator: (value) {
             return value.isEmpty ? 'Vui lòng ${name}' : null;
@@ -331,8 +345,26 @@ class _AddCourseState extends State<AddCourse> {
         });
   }
 
+  int compareDate(String dateStart, String dateEnd) {
+    DateTime _dateStart =
+        DateTime.parse(dateStart.replaceAll('/', '-') + 'T14Z');
+    DateTime _dateEnd = DateTime.parse(dateEnd.replaceAll('/', '-') + 'T14Z');
+    final diffence = _dateStart.difference(_dateEnd).inDays;
+    return diffence;
+  }
+
+  bool timeOut(time) {
+    int _timeOut = time.difference(_timeStart).inMilliseconds;
+    if (_timeOut >= 1400) {
+      _timeStart = time;
+      return true;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    GlobalKey<ScaffoldState> _key = GlobalKey<ScaffoldState>();
+
     final data = Provider.of<BuildingsRooms>(context);
     _listBR = data.listObjBuildingRoom;
     var _keysList = _listBR[0]
@@ -348,18 +380,25 @@ class _AddCourseState extends State<AddCourse> {
     if (_dateEnd.text == '') _dateEnd.text = _dateTimeNow.toString();
     if (_listBR[0][_keysList].length <= 1) fetchBR(context);
     return Scaffold(
+      key: _key,
       appBar: _buildAppBar(),
-      body: _buildBody(),
+      body: _buildBody(_key),
     );
   }
 
   Widget _buildAppBar() {
     return AppBar(
+      leading: IconButton(
+        icon: Icon(Icons.arrow_back_ios),
+        onPressed: () {
+          Navigator.pop(context);
+        },
+      ),
       title: Text('TẠO MỚI KHOÁ HỌC'),
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildBody(_key) {
     return Container(
       padding: const EdgeInsets.all(20),
       child: Form(
@@ -414,7 +453,21 @@ class _AddCourseState extends State<AddCourse> {
                         _keyNameLecture.currentState.validate()) {
                       if (_keyNameCourse.currentState.validate() &&
                           _keyNameLecture.currentState.validate()) {
-                        _saveForm();
+                        if (compareDate(_dateStart.text, _dateEnd.text) <= 0)
+                          _saveForm(_key);
+                        else {
+                          var now = new DateTime.now();
+                          // print(timeOut(now));
+                          if (timeOut(now) == true) {
+                            snackBar(
+                                _key,
+                                'Ngày bắt đầu phải nhỏ hơn ngày kết thúc !',
+                                Icon(
+                                  Icons.warning,
+                                  color: Colors.yellow,
+                                ));
+                          }
+                        }
                       }
                     }
                   },

@@ -25,7 +25,7 @@ showAlertDialog(String id, BuildContext context) {
       deleteAlbum(id, context);
       Scaffold.of(context).showSnackBar(
         new SnackBar(
-          content: new Text('You saved the thing!'),
+          content: new Text('Xoá khoá học thành công !'),
         ),
       );
 
