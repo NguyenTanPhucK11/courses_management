@@ -10,7 +10,6 @@ snackBar(GlobalKey<ScaffoldState> _key, String text, icons) async {
                 new Text(text),
               ],
             ),
-            duration: Duration(milliseconds: 500),
           ),
         )
       : _key.currentState.showSnackBar(
@@ -22,7 +21,6 @@ snackBar(GlobalKey<ScaffoldState> _key, String text, icons) async {
                 icons,
               ],
             ),
-            duration: Duration(milliseconds: 500),
           ),
         );
 }

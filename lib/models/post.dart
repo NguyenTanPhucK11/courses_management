@@ -1,13 +1,12 @@
-class Album {
+class GetApi {
   final int resultCode;
   final data;
   final String message;
 
-  Album({this.resultCode, this.data, this.message});
+  GetApi({this.resultCode, this.data, this.message});
 
-  factory Album.fromJson(Map<String, dynamic> json) {
-    // print("json: ${json['resultCode']}");
-    return Album(
+  factory GetApi.fromJson(Map<String, dynamic> json) {
+    return GetApi(
         resultCode: json['resultCode'],
         data: json['data'],
         message: json['message']);

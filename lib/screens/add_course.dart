@@ -1,21 +1,18 @@
-import 'dart:convert';
-import 'dart:io';
-
-import 'package:courses_management/models/post.dart';
-import 'package:courses_management/providers/course.dart';
-import 'package:courses_management/providers/courses.dart';
-import 'package:courses_management/screens/courses_overview_screen.dart';
-import 'package:courses_management/widget/snackbar.dart';
+import 'package:course_management/data/network/api/add_api.dart';
+import 'package:course_management/data/network/api/buildings_api.dart';
+import 'package:course_management/data/network/api/edit_api.dart';
+import 'package:course_management/providers/course.dart';
+import 'package:course_management/providers/courses.dart';
+import 'package:course_management/providers/responsive.dart';
+import 'package:course_management/widget/alert.dart';
+import 'package:course_management/widget/snackbar.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_datetime_picker/flutter_datetime_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/buildings_rooms.dart';
-import 'package:http/http.dart' as http;
-import '../providers/accounts.dart';
 
 class AddCourse extends StatefulWidget {
   static const routeName = '/edit-course';
@@ -24,107 +21,30 @@ class AddCourse extends StatefulWidget {
   _AddCourseState createState() => _AddCourseState();
 }
 
-Future<Album> editCourses(String id, Course course, BuildContext context,
-    String dateStart, String dateEnd, int buildingId, int roomId) async {
-  final _token = Provider.of<Accounts>(context, listen: false).token.toString();
-  // print(_token);
-  final _roomId = Provider.of<BuildingsRooms>(context, listen: false);
-  final _buidingId = _roomId.listObjBuildingRoomId[buildingId];
-  final http.Response response = await http.post(
-    'http://118.69.123.51:5000/fis/api/edu/edit_course',
-    headers: <String, String>{
-      'Content-Type': 'application/json; charset=UTF-8',
-      HttpHeaders.authorizationHeader: "Basic ${_token}",
-    },
-    body: jsonEncode(<String, String>{
-      "courseId": id,
-      "courseName": course.nameCourse,
-      "trainer": course.nameLectures,
-      "startedDate": dateStart,
-      "endedDate": dateEnd,
-      "buildingId": _buidingId.keys
-          .toString()
-          .substring(1, _buidingId.keys.toString().length - 1),
-      "roomId": _buidingId[_buidingId.keys
-              .toString()
-              .substring(1, _buidingId.keys.toString().length - 1)][roomId]
-          .toString(),
-    }),
-  );
-  // print(dateStart + ":" + dateEnd);
-  print(Album.fromJson(jsonDecode(response.body)).message);
-  if (Album.fromJson(jsonDecode(response.body)).resultCode == 1) {
-    Navigator.push(context,
-        MaterialPageRoute(builder: (context) => CoursesOverviewScreen()));
-  }
-  if (response.statusCode == 200) {
-    return Album.fromJson(jsonDecode(response.body));
-  } else {
-    throw Exception('Failed to create album.');
-  }
-}
-
-Future<Album> addCourse(Course course, BuildContext context, dateStart, dateEnd,
-    int buildingId, int roomId) async {
-  final _token = Provider.of<Accounts>(context, listen: false).token.toString();
-  // print(_token);
-  final _roomId = Provider.of<BuildingsRooms>(context, listen: false);
-  final _buidingId = _roomId.listObjBuildingRoomId[buildingId];
-  final http.Response response = await http.post(
-    'http://118.69.123.51:5000/fis/api/edu/create_new_course',
-    headers: <String, String>{
-      'Content-Type': 'application/json; charset=UTF-8',
-      HttpHeaders.authorizationHeader: "Basic ${_token}",
-    },
-    body: jsonEncode(<String, String>{
-      "courseName": course.nameCourse,
-      "trainer": course.nameLectures,
-      "startedDate": dateStart + 'T00:00:00.000Z',
-      "endedDate": dateEnd + 'T00:00:00.000Z',
-      "buildingId": _buidingId.keys
-          .toString()
-          .substring(1, _buidingId.keys.toString().length - 1),
-      "roomId": _buidingId[_buidingId.keys
-              .toString()
-              .substring(1, _buidingId.keys.toString().length - 1)][roomId]
-          .toString(),
-    }),
-  );
-
-  print(Album.fromJson(jsonDecode(response.body)).message);
-  if (Album.fromJson(jsonDecode(response.body)).resultCode == 1) {
-    Navigator.push(context,
-        MaterialPageRoute(builder: (context) => CoursesOverviewScreen()));
-  }
-  if (response.statusCode == 200) {
-    return Album.fromJson(jsonDecode(response.body));
-  } else {
-    throw Exception('Failed to create album.');
-  }
-}
-
 class _AddCourseState extends State<AddCourse> {
+  String _dateTimeNow = DateFormat('yyyy-MM-dd').format(DateTime.now());
+  Text _textTitle;
+  int _selectedValueBuilding = 0;
+  int _selectedValueRoom = 0;
+
   final _dateStart = TextEditingController();
   final _dateEnd = TextEditingController();
   final _nameCourse = TextEditingController();
   final _nameLecture = TextEditingController();
-
   final _colorBlue = Colors.blue[800];
   final _colorGrey = Colors.grey[300];
   final _keyNameCourse = GlobalKey<FormState>();
   final _keyNameLecture = GlobalKey<FormState>();
+  final _keyDateStart = GlobalKey<FormState>();
+  final _keyDateEnd = GlobalKey<FormState>();
   final _form = GlobalKey<FormState>();
-  String _dateTimeNow = DateFormat('yyyy-MM-dd').format(DateTime.now());
-  var _timeStart = DateTime.now();
-  final FocusNode _nameCouseFocus = FocusNode();
 
-  int _selectedValueBuilding = 0;
-  int _selectedValueRoom = 0;
-  var _listBuilding = ['Keangnam'];
-  var _listRoom = ['Berlin - Tầng 20'];
+  var _timeStart = DateTime.now();
+  var _listBuilding = ['Chọn toà nhà'];
+  var _listRoom = ['Chọn phòng'];
   var _listBR;
   var _isInit = true;
-
+  var _isChooseBR = false;
   var editCourse = Course(
     id: null,
     nameCourse: '',
@@ -136,11 +56,23 @@ class _AddCourseState extends State<AddCourse> {
   );
 
   @override
+  void initState() {
+    super.initState();
+  }
+
+  @override
   void didChangeDependencies() {
-    // TODO: implement didChangeDependencies
     if (_isInit) {
       final courseId = ModalRoute.of(context).settings.arguments as String;
       if (courseId != null) {
+        _textTitle = Text(
+          'CHỈNH SỬA KHOÁ HỌC',
+          style: TextStyle(
+            color: Colors.blueGrey[500],
+            fontWeight: FontWeight.bold,
+          ),
+        );
+
         editCourse =
             Provider.of<Courses>(context, listen: false).findById(courseId);
         _nameCourse.text = editCourse.nameCourse;
@@ -151,7 +83,20 @@ class _AddCourseState extends State<AddCourse> {
             .toString()
             .substring(editCourse.date.length - 10, editCourse.date.length)
             .replaceAll('/', '-');
-      }
+        _fetchBR();
+        _selectedValueBuilding = _listBuilding.indexOf(editCourse.building);
+        _listRoom = _listBR[_listBuilding.indexOf(editCourse.building)]
+            [editCourse.building];
+        _selectedValueRoom = _listRoom
+            .indexWhere((element) => element.startsWith(editCourse.room));
+      } else
+        _textTitle = Text(
+          'TẠO MỚI KHOÁ HỌC',
+          style: TextStyle(
+            color: Colors.blueGrey[500],
+            fontWeight: FontWeight.bold,
+          ),
+        );
     }
     _isInit = false;
     super.didChangeDependencies();
@@ -176,15 +121,14 @@ class _AddCourseState extends State<AddCourse> {
     if (editCourse.id != null) {
       _data.updateCourse(editCourse.id, editCourse);
       snackBar(_key, 'Chỉnh sửa khoá học thành công !', null);
-      await Future.delayed(Duration(milliseconds: 500));
+      await Future.delayed(Duration(milliseconds: 300));
       editCourses(editCourse.id, editCourse, context, _dateStart.text,
           _dateEnd.text, _selectedValueBuilding, _selectedValueRoom);
       _data.remove();
-      // snackBar(context, 'Edit ');
     } else {
       _data.addCourse(editCourse);
       snackBar(_key, 'Thêm khoá học thành công !', null);
-      await Future.delayed(Duration(milliseconds: 500));
+      await Future.delayed(Duration(milliseconds: 300));
       addCourse(editCourse, context, _dateStart.text, _dateEnd.text,
           _selectedValueBuilding, _selectedValueRoom);
       _data.remove();
@@ -195,64 +139,116 @@ class _AddCourseState extends State<AddCourse> {
     return i < 10 ? '0' + i.toString() : i.toString();
   }
 
-  Widget text(String text) {
+  Widget text(String text, i) {
     return Text(
       text,
       style: TextStyle(
         color: _colorBlue,
         fontWeight: FontWeight.bold,
-        fontSize: 15,
+        fontSize: 32 * i,
       ),
     );
   }
 
-  Widget dateTime(TextEditingController myController, Text textTime) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        textTime,
-        SizedBox(height: 10),
-        Container(
-          width: MediaQuery.of(context).size.width * 0.44,
-          alignment: Alignment.center,
-          child: TextFormField(
-            readOnly: true,
-            style: TextStyle(color: _colorBlue),
-            controller: myController,
-            decoration: InputDecoration(
-              // hintText: _dateTimeNow.toString(),
-              suffixIcon: Icon(Icons.today),
-              enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: _colorGrey, width: 1.0)),
-              focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: _colorGrey, width: 1.0)),
+  Widget dateTime(GlobalKey<FormState> _key, TextEditingController myController,
+      Text textTime, String _text, bool isDateStart) {
+    var _scale = Provider.of<Scales>(context, listen: false).scale(
+        MediaQuery.of(context).size.width, MediaQuery.of(context).size.height);
+    DateTime _date;
+    //     DateTime.parse(myController.text.replaceAll('-', '') + 'T14Z');
+    return Form(
+      key: _key,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          textTime,
+          SizedBox(height: 20 * _scale),
+          Container(
+            width: MediaQuery.of(context).size.width * 0.44,
+            alignment: Alignment.center,
+            child: TextFormField(
+              onChanged: (value) {},
+              validator: (value) {
+                return value.isEmpty ? 'Vui lòng nhập ${_text}' : null;
+              },
+              readOnly: true,
+              style: TextStyle(color: _colorBlue),
+              controller: myController,
+              decoration: InputDecoration(
+                hintText: 'Chọn ngày',
+                suffixIcon: Icon(Icons.today),
+                enabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: _colorGrey, width: 1.0)),
+                focusedBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: _colorGrey, width: 1.0)),
+              ),
+              onTap: () {
+                _date = DateTime.now();
+                if (isDateStart || (!isDateStart && _dateStart.text != '')) {
+                  if (myController.text == '') {
+                    myController.text = _dateTimeNow.toString();
+                    _key.currentState.validate();
+                    if (compareDate(_dateStart.text, _dateTimeNow) > 0)
+                      myController.text = _dateStart.text;
+                  }
+
+                  _date = DateTime.parse(myController.text.replaceAll('-', ''));
+                  DatePicker.showDatePicker(context,
+                      showTitleActions: true,
+                      minTime: !isDateStart
+                          ? DateTime(
+                              int.parse(_dateStart.text.substring(0, 4)),
+                              int.parse(_dateStart.text.substring(5, 7)),
+                              int.parse(_dateStart.text.substring(8, 10)))
+                          : DateTime(2010, 1, 1),
+                      maxTime: DateTime(2022, 12, 31), onChanged: (date) {
+                    myController.text =
+                        '${date.year}-${formatTime(date.month)}-${formatTime(date.day)}';
+                    _key.currentState.validate();
+                    if (compareDate(_dateStart.text, _dateEnd.text) > 0) {
+                      _dateEnd.text = _dateStart.text;
+                    }
+                  }, onConfirm: (date) {
+                    _key.currentState.validate();
+                    myController.text =
+                        '${date.year}-${formatTime(date.month)}-${formatTime(date.day)}';
+                    if (compareDate(_dateStart.text, _dateEnd.text) > 0) {
+                      _dateEnd.text = _dateStart.text;
+                    }
+                  }, currentTime: _date, locale: LocaleType.en);
+                }
+              },
             ),
-            onTap: () {
-              if (myController.text == "")
-                myController.text = _dateTimeNow.toString();
-              DatePicker.showDatePicker(context,
-                  showTitleActions: true,
-                  minTime: DateTime(2010, 1, 1),
-                  maxTime: DateTime(2022, 12, 31), onChanged: (date) {
-                myController.text =
-                    '${date.year}-${formatTime(date.month)}-${formatTime(date.day)}';
-              }, onConfirm: (date) {
-                myController.text =
-                    '${date.year}-${formatTime(date.month)}-${formatTime(date.day)}';
-              }, currentTime: DateTime.now(), locale: LocaleType.en);
-            },
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
-  Widget option(var list, showPicker) {
+  Widget option(var list, Function showPicker, bool isBuilding) {
+    var _scale = Provider.of<Scales>(context, listen: false).scale(
+        MediaQuery.of(context).size.width, MediaQuery.of(context).size.height);
     return Container(
-      width: MediaQuery.of(context).size.width,
-      height: 50,
+      width: MediaQuery.of(context).size.width * 2 * _scale,
+      height: 110 * _scale,
       child: RaisedButton(
-        onPressed: showPicker,
+        color: Theme.of(context).scaffoldBackgroundColor,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(0.0),
+          side: BorderSide(
+            color: Colors.blueGrey[50],
+          ),
+        ),
+        onPressed: () {
+          if (isBuilding || (!isBuilding && _listBuilding.length > 1)) {
+            setState(() {
+              _isChooseBR = false;
+              _fetchBR();
+            });
+            showPicker();
+          } else
+            alertChooseRoom(context);
+        },
         child: Align(
             alignment: Alignment.centerLeft,
             child: Text(
@@ -265,21 +261,26 @@ class _AddCourseState extends State<AddCourse> {
 
   Widget nameInput(String name, GlobalKey<FormState> _key,
       TextEditingController myController) {
+    var _scale = Provider.of<Scales>(context, listen: false).scale(
+        MediaQuery.of(context).size.width, MediaQuery.of(context).size.height);
     return Container(
-      height: 60,
-      width: MediaQuery.of(context).size.width * 0.95,
+      height: 125 * _scale,
+      width: MediaQuery.of(context).size.width * 1.9 * _scale,
       decoration: new BoxDecoration(
         borderRadius: BorderRadius.circular(5),
       ),
       child: Form(
         key: _key,
         child: TextFormField(
-          inputFormatters: [
-            WhitelistingTextInputFormatter(RegExp(r"[a-zA-Z]+|\s"))
-          ],
+          textCapitalization: TextCapitalization.sentences,
+          onChanged: (value) {
+            _key.currentState.validate();
+          },
           textAlignVertical: TextAlignVertical.center,
           validator: (value) {
-            return value.isEmpty ? 'Vui lòng ${name}' : null;
+            return (value.isEmpty || value.trim().isEmpty)
+                ? 'Vui lòng ${name}'
+                : null;
           },
           decoration: InputDecoration(
               enabledBorder: OutlineInputBorder(
@@ -301,24 +302,72 @@ class _AddCourseState extends State<AddCourse> {
         context: context,
         builder: (BuildContext context) {
           return Container(
-            height: MediaQuery.of(context).size.width * 0.5,
-            child: CupertinoPicker(
-              backgroundColor: Colors.white,
-              onSelectedItemChanged: (value) {
-                setState(() {
-                  _selectedValueBuilding = value;
-                  var _keysList = _listBR[value]
-                      .keys
-                      .toString()
-                      .substring(1, _listBR[value].keys.toString().length - 1);
-                  _listRoom = _listBR[value][_keysList];
-                });
-              },
-              itemExtent: 32.0,
-              children: [
-                for (var itemBuilding in _listBuilding) Text(itemBuilding),
-              ],
-            ),
+            height: MediaQuery.of(context).size.height * 0.3,
+            child: Column(
+                mainAxisAlignment: MainAxisAlignment.start,
+                children: <Widget>[
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: <Widget>[
+                      CupertinoButton(
+                        child: Text(
+                          'Cancel',
+                          style: TextStyle(
+                            color: Colors.red,
+                          ),
+                        ),
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                        },
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16.0,
+                          vertical: 5.0,
+                        ),
+                      ),
+                      CupertinoButton(
+                        child: Text('Confirm'),
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                        },
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16.0,
+                          vertical: 5.0,
+                        ),
+                      )
+                    ],
+                  ),
+                  Container(
+                    height: MediaQuery.of(context).size.height * 0.2,
+                    child: CupertinoPicker(
+                      scrollController: FixedExtentScrollController(
+                          initialItem: _selectedValueBuilding != 0
+                              ? _selectedValueBuilding
+                              : 0),
+                      backgroundColor: Colors.white,
+                      onSelectedItemChanged: (value) {
+                        setState(() {
+                          _fetchBR();
+                          _selectedValueBuilding = value;
+                          var _keysList = _listBR[value]
+                              .keys
+                              .toString()
+                              .substring(
+                                  1, _listBR[value].keys.toString().length - 1);
+                          _listRoom = _listBR[value][_keysList];
+                          if (_selectedValueRoom >
+                              _listBR[value][_keysList].length - 1)
+                            _selectedValueRoom =
+                                _listBR[value][_keysList].length - 1;
+                        });
+                      },
+                      itemExtent: 32.0,
+                      children: [
+                        for (var itemBuilding in _listBuilding)
+                          Text(itemBuilding),
+                      ],
+                    ),
+                  )
+                ]),
           );
         });
   }
@@ -328,29 +377,74 @@ class _AddCourseState extends State<AddCourse> {
         context: context,
         builder: (BuildContext context) {
           return Container(
-            height: MediaQuery.of(context).size.width * 0.5,
-            child: CupertinoPicker(
-              backgroundColor: Colors.white,
-              onSelectedItemChanged: (value) {
-                setState(() {
-                  _selectedValueRoom = value;
-                });
-              },
-              itemExtent: 32.0,
-              children: [
-                for (var itemRoom in _listRoom) Text(itemRoom),
-              ],
-            ),
-          );
+              height: MediaQuery.of(context).size.height * 0.3,
+              child: Column(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: <Widget>[
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: <Widget>[
+                        CupertinoButton(
+                          child: Text(
+                            'Cancel',
+                            style: TextStyle(
+                              color: Colors.red,
+                            ),
+                          ),
+                          onPressed: () {
+                            Navigator.of(context).pop();
+                          },
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16.0,
+                            vertical: 5.0,
+                          ),
+                        ),
+                        CupertinoButton(
+                          child: Text('Confirm'),
+                          onPressed: () {
+                            Navigator.of(context).pop();
+                          },
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16.0,
+                            vertical: 5.0,
+                          ),
+                        )
+                      ],
+                    ),
+                    Container(
+                      height: MediaQuery.of(context).size.width * 0.5,
+                      child: CupertinoPicker(
+                        scrollController: FixedExtentScrollController(
+                            initialItem: _selectedValueRoom != 0
+                                ? _selectedValueRoom
+                                : 0),
+                        backgroundColor: Colors.white,
+                        onSelectedItemChanged: (value) {
+                          setState(() {
+                            if (_selectedValueRoom > _listRoom.length)
+                              _selectedValueRoom = _listRoom.length;
+                            else
+                              _selectedValueRoom = value;
+                          });
+                        },
+                        itemExtent: 32.0,
+                        children: [
+                          for (var itemRoom in _listRoom) Text(itemRoom),
+                        ],
+                      ),
+                    )
+                  ]));
         });
   }
 
   int compareDate(String dateStart, String dateEnd) {
     DateTime _dateStart =
         DateTime.parse(dateStart.replaceAll('/', '-') + 'T14Z');
-    DateTime _dateEnd = DateTime.parse(dateEnd.replaceAll('/', '-') + 'T14Z');
+    DateTime _dateEnd = dateEnd != ''
+        ? DateTime.parse(dateEnd.replaceAll('/', '-') + 'T14Z')
+        : _dateStart;
     final diffence = _dateStart.difference(_dateEnd).inDays;
-    return diffence;
+    return (dateStart != '' || dateEnd != null) ? diffence : 0;
   }
 
   bool timeOut(time) {
@@ -361,75 +455,114 @@ class _AddCourseState extends State<AddCourse> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    GlobalKey<ScaffoldState> _key = GlobalKey<ScaffoldState>();
-
-    final data = Provider.of<BuildingsRooms>(context);
+  _fetchBR() {
+    final data = Provider.of<BuildingsRooms>(context, listen: false);
     _listBR = data.listObjBuildingRoom;
     var _keysList = _listBR[0]
         .keys
         .toString()
         .substring(1, _listBR[0].keys.toString().length - 1);
-    if (_listRoom.length == 1) _listRoom = _listBR[0][_keysList];
+    if (_listRoom.length <= 1) _listRoom = _listBR[0][_keysList];
     if (_listBuilding.length <= 1) {
       _listBuilding = [];
       for (var item in _listBR) _listBuilding.addAll(item.keys);
     }
-    if (_dateStart.text == '') _dateStart.text = _dateTimeNow.toString();
-    if (_dateEnd.text == '') _dateEnd.text = _dateTimeNow.toString();
     if (_listBR[0][_keysList].length <= 1) fetchBR(context);
-    return Scaffold(
-      key: _key,
-      appBar: _buildAppBar(),
-      body: _buildBody(_key),
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    GlobalKey<ScaffoldState> _key = GlobalKey<ScaffoldState>();
+    return GestureDetector(
+      onTap: () {
+        FocusScopeNode currentFocus = FocusScope.of(context);
+        if (!currentFocus.hasPrimaryFocus) currentFocus.unfocus();
+      },
+      child: WillPopScope(
+        onWillPop: () async => false,
+        child: Scaffold(
+          key: _key,
+          appBar: _buildAppBar(),
+          body: _buildBody(_key),
+        ),
+      ),
     );
   }
 
   Widget _buildAppBar() {
     return AppBar(
+      backgroundColor: Colors.white,
       leading: IconButton(
-        icon: Icon(Icons.arrow_back_ios),
+        icon: Icon(Icons.arrow_back_ios, color: Colors.blueGrey[200]),
         onPressed: () {
           Navigator.pop(context);
         },
       ),
-      title: Text('TẠO MỚI KHOÁ HỌC'),
+      title: _textTitle,
     );
   }
 
   Widget _buildBody(_key) {
+    var _scale = Provider.of<Scales>(context, listen: false).scale(
+        MediaQuery.of(context).size.width, MediaQuery.of(context).size.height);
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(40 * _scale),
       child: Form(
         key: _form,
         child: Wrap(
-          runSpacing: 10,
+          runSpacing: 20 * _scale,
           children: <Widget>[
-            text('Tên Khoá'),
+            text('Tên Khoá', _scale),
             nameInput('Nhập tên khoá học', _keyNameCourse, _nameCourse),
-            text('Giảng viên'),
+            text('Giảng viên', _scale),
             nameInput('Nhập tên giảng viên', _keyNameLecture, _nameLecture),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: <Widget>[
-                dateTime(_dateStart, text('Từ ngày')),
-                dateTime(_dateEnd, text('Đến ngày')),
+                dateTime(_keyDateStart, _dateStart, text('Từ ngày', _scale),
+                    'ngày bắt đầu!', true),
+                dateTime(_keyDateEnd, _dateEnd, text('Đến ngày', _scale),
+                    'ngày kết thúc', false),
               ],
             ),
-            text('Toà nhà'),
-            option(_listBuilding[_selectedValueBuilding], showPickerBuilding),
-            text('Phòng'),
-            option(_listRoom[_selectedValueRoom], showPickerRoom),
+            text('Toà nhà', _scale),
+            option(_listBuilding[_selectedValueBuilding], showPickerBuilding,
+                true),
+            _isChooseBR
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        child: Text(
+                          'Vui lòng chọn toà nhà!',
+                          style: TextStyle(
+                              color: Colors.red[700], fontSize: 25 * _scale),
+                        ),
+                      ),
+                      SizedBox(height: 20 * _scale),
+                      text('Phòng', _scale),
+                    ],
+                  )
+                : Column(),
+            option(_listRoom[_selectedValueRoom], showPickerRoom, false),
+            _isChooseBR
+                ? Container(
+                    child: Text(
+                      'Vui lòng chọn phòng!',
+                      style: TextStyle(
+                          color: Colors.red[700], fontSize: 25 * _scale),
+                    ),
+                  )
+                : Column(),
             Align(
               alignment: Alignment.centerRight,
               child: Container(
-                width: MediaQuery.of(context).size.width * 0.4,
-                height: MediaQuery.of(context).size.height * 0.05,
+                width: MediaQuery.of(context).size.width * 0.8 * _scale,
+                height: MediaQuery.of(context).size.height * 0.1 * _scale,
                 child: RaisedButton(
                   color: Colors.orange,
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10)),
+                      borderRadius: BorderRadius.circular(20 * _scale)),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: <Widget>[
@@ -437,11 +570,11 @@ class _AddCourseState extends State<AddCourse> {
                         Icons.save,
                         color: Colors.white,
                       ),
-                      SizedBox(width: 10),
+                      SizedBox(width: 20 * _scale),
                       Text(
                         'LƯU',
                         style: TextStyle(
-                          fontSize: 20,
+                          fontSize: 40 * _scale,
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
                         ),
@@ -449,25 +582,29 @@ class _AddCourseState extends State<AddCourse> {
                     ],
                   ),
                   onPressed: () {
+                    _listBuilding.length > 1
+                        ? setState(() {
+                            _isChooseBR = false;
+                          })
+                        : setState(() {
+                            _isChooseBR = true;
+                          });
+
                     if (_keyNameCourse.currentState.validate() ||
-                        _keyNameLecture.currentState.validate()) {
+                        _keyNameLecture.currentState.validate() ||
+                        _keyDateEnd.currentState.validate() ||
+                        _keyDateStart.currentState.validate()) {
                       if (_keyNameCourse.currentState.validate() &&
-                          _keyNameLecture.currentState.validate()) {
-                        if (compareDate(_dateStart.text, _dateEnd.text) <= 0)
-                          _saveForm(_key);
-                        else {
-                          var now = new DateTime.now();
-                          // print(timeOut(now));
-                          if (timeOut(now) == true) {
-                            snackBar(
-                                _key,
-                                'Ngày bắt đầu phải nhỏ hơn ngày kết thúc !',
-                                Icon(
-                                  Icons.warning,
-                                  color: Colors.yellow,
-                                ));
-                          }
-                        }
+                          _keyNameLecture.currentState.validate() &&
+                          _keyDateStart.currentState.validate() &&
+                          _keyDateEnd.currentState.validate()) {
+                        _nameCourse.text = _nameCourse.text
+                            .trim()
+                            .replaceAll(RegExp('\\s+'), ' ');
+                        _nameLecture.text = _nameLecture.text
+                            .trim()
+                            .replaceAll(RegExp('\\s+'), ' ');
+                        if (!_isChooseBR) _saveForm(_key);
                       }
                     }
                   },

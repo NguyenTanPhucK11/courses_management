@@ -1,14 +1,13 @@
-import 'package:course_management/data/network/api/delete_api.dart';
 import 'package:course_management/providers/accounts.dart';
+import 'package:course_management/providers/classes.dart';
 import 'package:course_management/providers/responsive.dart';
-import 'package:course_management/screens/add_course.dart';
+import 'package:course_management/screens/add_class.dart';
 import 'package:course_management/widget/alert.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
-import './course_info.dart';
-import '../providers/courses.dart';
+import 'course_info.dart';
 
 alertDeleteIOS(String id, BuildContext context) {
   showDialog(
@@ -25,7 +24,7 @@ alertDeleteIOS(String id, BuildContext context) {
             Text("Delete?"),
           ],
         ),
-        content: Text("Bạn có muốn xoá khoá học ?"),
+        content: Text("Bạn có muốn xoá buổi học ?"),
         actions: <Widget>[
           CupertinoDialogAction(
               isDefaultAction: true,
@@ -37,11 +36,10 @@ alertDeleteIOS(String id, BuildContext context) {
               textStyle: TextStyle(color: Colors.red),
               isDefaultAction: true,
               onPressed: () async {
-                Provider.of<Courses>(context, listen: false).deleteCourse(id);
-                deleteCourse(id, context);
+                Provider.of<Clss>(context, listen: false).deleteClass(id);
                 Scaffold.of(context).showSnackBar(
                   new SnackBar(
-                    content: new Text('Xoá khoá học thành công !'),
+                    content: new Text('Xoá buổi học thành công !'),
                     duration: Duration(milliseconds: 300),
                   ),
                 );
@@ -52,61 +50,51 @@ alertDeleteIOS(String id, BuildContext context) {
       ));
 }
 
-class CourseItem extends StatelessWidget {
+class ClassItem extends StatelessWidget {
   final String id;
+  final String idCourse;
   final String nameCourse;
   final String nameLectures;
   final String nameManager;
   final String date;
+  final String time;
   final String building;
   final String room;
 
   Color _mainColor = Colors.blueGrey[800];
 
-  CourseItem(this.id, this.nameCourse, this.nameLectures, this.nameManager,
-      this.date, this.building, this.room);
+  ClassItem(this.id, this.idCourse, this.nameCourse, this.nameLectures,
+      this.nameManager, this.date, this.time, this.building, this.room);
 
   @override
   Widget build(BuildContext context) {
-    final GlobalKey<ScaffoldState> _scaffoldKey =
-        new GlobalKey<ScaffoldState>();
     var _scale = Provider.of<Scales>(context, listen: false).scale(
         MediaQuery.of(context).size.width, MediaQuery.of(context).size.height);
+    final GlobalKey<ScaffoldState> _scaffoldKey =
+        new GlobalKey<ScaffoldState>();
     return Card(
       key: _scaffoldKey,
-      elevation: 4,
-      shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.circular(12))),
+      elevation: 5,
       child: Container(
-        padding: EdgeInsets.only(
-            bottom: 35 * _scale,
-            top: 15 * _scale,
-            left: 30 * _scale,
-            right: 30 * _scale),
+        padding:
+            const EdgeInsets.only(bottom: 20.0, top: 10, left: 10, right: 10),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             Row(
-              mainAxisAlignment: MainAxisAlignment.start,
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 Expanded(
-                  flex: 12,
-                  child: Container(
-                    child: Text(
-                      nameCourse,
-                      overflow: TextOverflow.ellipsis,
-                      maxLines: 2,
-                      style: TextStyle(
-                        fontSize: 30 * _scale,
-                        fontWeight: FontWeight.bold,
-                      ),
+                  flex: 9,
+                  child: Text(
+                    nameCourse,
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 2,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                ),
-                Expanded(
-                  flex: 2,
-                  child: Container(),
                 ),
                 Expanded(
                   flex: 1,
@@ -124,7 +112,7 @@ class CourseItem extends StatelessWidget {
                             //         .role ==
                             //     'admin') {
                             Navigator.of(context).pushNamed(
-                              AddCourse.routeName,
+                              AddClass.routeName,
                               arguments: id,
                             );
                             // } else {
@@ -133,8 +121,8 @@ class CourseItem extends StatelessWidget {
                             break;
                           case 2:
                             // if (Provider.of<Accounts>(context, listen: false)
-                            //     .role ==
-                            // 'admin')
+                            //         .role ==
+                            //     'admin')
                             alertDeleteIOS(id, context);
                             // else
                             //   showAlertAdmin(context);
@@ -200,8 +188,17 @@ class CourseItem extends StatelessWidget {
                   size: 40 * _scale,
                 ),
                 _mainColor,
-                'Thời gian: ',
+                'Ngày : ',
                 date),
+            CourseInfo(
+                FaIcon(
+                  FontAwesomeIcons.clock,
+                  color: Colors.lightGreen,
+                  size: 40 * _scale,
+                ),
+                _mainColor,
+                'Thời gian: ',
+                time),
             CourseInfo(
                 FaIcon(
                   FontAwesomeIcons.solidBuilding,

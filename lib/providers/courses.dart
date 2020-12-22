@@ -13,24 +13,6 @@ class Courses with ChangeNotifier {
     //   building: 'Tân Thuận 3',
     //   room: 'Chương Dương - Tầng 5',
     // ),
-    // Course(
-    //   id: 'p2',
-    //   nameCourse: 'Giới thiệu hệ sinh thái bảo mật toàn diện của Cisco',
-    //   nameLectures: 'Phan Từ Huy2',
-    //   nameManager: 'trinhntk',
-    //   date: '10/11/2020 - 10/11/2020',
-    //   building: 'Tân Thuận 3',
-    //   room: 'Chương Dương - Tầng 5',
-    // ),
-    // Course(
-    //   id: 'p3',
-    //   nameCourse: 'Giới thiệu hệ sinh thái bảo mật toàn diện của Cisco',
-    //   nameLectures: 'Phan Từ Huy3',
-    //   nameManager: 'trinhntk',
-    //   date: '01/01/2020 - 01/11/2020',
-    //   building: 'Tân Thuận 3',
-    //   room: 'Chương Dương - Tầng 5',
-    // ),
   ];
 
   List<Course> get courses {
